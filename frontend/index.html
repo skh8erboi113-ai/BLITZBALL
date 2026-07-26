@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blitzball League Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <h1>⚽ Blitzball League</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#" data-section="teams" class="nav-link active">Teams</a></li>
+                <li><a href="#" data-section="players" class="nav-link">Players</a></li>
+                <li><a href="#" data-section="matches" class="nav-link">Matches</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- Teams Section -->
+            <section id="teams-section" class="section active">
+                <div class="section-header">
+                    <h2>Teams</h2>
+                    <button id="create-team-btn" class="btn btn-primary">Create Team</button>
+                </div>
+                <div id="teams-list" class="teams-grid"></div>
+            </section>
+
+            <!-- Players Section -->
+            <section id="players-section" class="section">
+                <div class="section-header">
+                    <h2>Players</h2>
+                    <button id="create-player-btn" class="btn btn-primary">Create Player</button>
+                </div>
+                <div id="players-list" class="players-grid"></div>
+            </section>
+
+            <!-- Matches Section -->
+            <section id="matches-section" class="section">
+                <div class="section-header">
+                    <h2>Matches</h2>
+                    <button id="create-match-btn" class="btn btn-primary">Schedule Match</button>
+                </div>
+                <div id="matches-list" class="matches-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="team-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="team-modal-title">Create Team</h2>
+            <form id="team-form">
+                <input type="hidden" id="team-id">
+                <div class="form-group">
+                    <label>Team Name *</label>
+                    <input type="text" id="team-name" required>
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="team-city">
+                </div>
+                <div class="form-group">
+                    <label>Coach</label>
+                    <input type="text" id="team-coach">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Team</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="player-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="player-modal-title">Create Player</h2>
+            <form id="player-form">
+                <input type="hidden" id="player-id">
+                <div class="form-group">
+                    <label>Player Name *</label>
+                    <input type="text" id="player-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Team *</label>
+                    <select id="player-team" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Position</label>
+                    <select id="player-position">
+                        <option>Forward</option>
+                        <option>Midfielder</option>
+                        <option>Defender</option>
+                        <option>Goalkeeper</option>
+                    </select>
+                </div>
+                <div class="stats-grid">
+                    <div class="form-group">
+                        <label>HP</label>
+                        <input type="number" id="stat-hp" value="100" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>SPD</label>
+                        <input type="number" id="stat-spd" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>END</label>
+                        <input type="number" id="stat-end" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>ATK</label>
+                        <input type="number" id="stat-atk" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>PAS</label>
+                        <input type="number" id="stat-pas" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>SHT</label>
+                        <input type="number" id="stat-sht" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>BLI</label>
+                        <input type="number" id="stat-bli" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>RCH</label>
+                        <input type="number" id="stat-rch" value="10" min="1">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Player</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="match-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="match-modal-title">Schedule Match</h2>
+            <form id="match-form">
+                <input type="hidden" id="match-id">
+                <div class="form-group">
+                    <label>Home Team *</label>
+                    <select id="match-home-team" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Away Team *</label>
+                    <select id="match-away-team" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Match Date *</label>
+                    <input type="datetime-local" id="match-date" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Schedule Match</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/blitzmath.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
