@@ -2,8 +2,10 @@ from flask import Blueprint
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
-from backend.routes import teams, players, matches
+from backend.routes import teams, players, matches, simulation, builder
 
 bp.register_blueprint(teams.bp)
 bp.register_blueprint(players.bp)
 bp.register_blueprint(matches.bp)
+bp.register_blueprint(simulation.bp)
+bp.register_blueprint(builder.bp)
