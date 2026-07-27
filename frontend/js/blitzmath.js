@@ -1,5 +1,6 @@
 /**
- * BlitzMath - Blitzball encounter formula
+ * BlitzMath - Client-side Blitzball encounter formula
+ * Matches backend logic for consistency
  */
 
 class BlitzMath {
@@ -67,9 +68,24 @@ class BlitzMath {
      */
     static formatResult(result) {
         if (result.success) {
-            return `BREAKTHROUGH! Remaining END: ${result.remaining_end}`;
+            return `⚡ BREAKTHROUGH! Remaining END: ${result.remaining_end}`;
         } else {
-            return `BALL LOST! Defender #${result.stopper_id} stole the ball`;
+            return `🛡️ BALL LOST! Defender #${result.stopper_id} stole the ball (END: ${result.remaining_end})`;
         }
+    }
+
+    /**
+     * Calculate expected outcome percentage
+     */
+    static calculateSuccessProbability(carrierEnd, defenders) {
+        const simulations = 1000;
+        let successes = 0;
+
+        for (let i = 0; i < simulations; i++) {
+            const result = this.resolveEncounter(carrierEnd, defenders);
+            if (result.success) successes++;
+        }
+
+        return (successes / simulations * 100).toFixed(1);
     }
 }
