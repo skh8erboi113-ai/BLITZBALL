@@ -1,38 +1,49 @@
+"""
+Player management routes
+"""
 from flask import Blueprint, request, jsonify
 from backend.models import db, Player, Team
 
-bp = Blueprint('players', __name__, url_prefix='/players')
+players_bp = Blueprint('players', __name__, url_prefix='/players')
 
-@bp.route('', methods=['GET'])
+@players_bp.route('', methods=['GET'])
 def get_all_players():
-    """Get all players"""
-    players = Player.query.all()
-    return jsonify([p.to_dict() for p in players]), 200
+    """Get all players with optional filters"""
+    team_id = request.args.get('team_id', type=int)
+    position = request.args.get('position')
+    
+    query = Player.query
+    
+    if team_id:
+        query = query.filter_by(team_id=team_id)
+    if position:
+        query = query.filter_by(position=position)
+    
+    players = query.order_by(Player.level.desc(), Player.experience.desc()).all()
+    return jsonify([p.to_dict(include_team=True) for p in players]), 200
 
-@bp.route('/<int:player_id>', methods=['GET'])
+@players_bp.route('/<int:player_id>', methods=['GET'])
 def get_player(player_id):
     """Get a specific player"""
-    player = Player.query.get(player_id)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 404
-    return jsonify(player.to_dict()), 200
+    player = Player.query.get_or_404(player_id)
+    return jsonify(player.to_dict(include_team=True)), 200
 
-@bp.route('', methods=['POST'])
+@players_bp.route('', methods=['POST'])
 def create_player():
     """Create a new player"""
     data = request.get_json()
     
-    required = ['name', 'team_id']
-    if not data or not all(k in data for k in required):
-        return jsonify({'error': 'Name and team_id required'}), 400
+    required_fields = ['name', 'team_id']
+    if not data or not all(field in data for field in required_fields):
+        return jsonify({'error': 'Name and team_id are required'}), 400
     
     team = Team.query.get(data['team_id'])
     if not team:
-        return jsonify({'error': 'Team not found'}), 404
+        return jsonify({'error': f"Team with id {data['team_id']} not found"}), 404
     
     try:
         player = Player(
-            name=data['name'],
+            name=data['name'].strip(),
             team_id=data['team_id'],
             position=data.get('position', 'Forward'),
             hp=data.get('hp', 100),
@@ -46,73 +57,81 @@ def create_player():
         )
         db.session.add(player)
         db.session.commit()
-        return jsonify(player.to_dict()), 201
+        return jsonify(player.to_dict(include_team=True)), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)}), 500
 
-@bp.route('/<int:player_id>', methods=['PUT'])
+@players_bp.route('/<int:player_id>', methods=['PUT'])
 def update_player(player_id):
     """Update player stats"""
-    player = Player.query.get(player_id)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 404
-    
+    player = Player.query.get_or_404(player_id)
     data = request.get_json()
     
-    # Update basic info
-    if 'name' in data:
-        player.name = data['name']
-    if 'position' in data:
-        player.position = data['position']
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
     
-    # Update stats
-    stat_fields = ['hp', 'spd', 'end', 'atk', 'pas', 'sht', 'bli', 'rch']
-    for stat in stat_fields:
-        if stat in data:
-            setattr(player, stat, data[stat])
-    
-    db.session.commit()
-    return jsonify(player.to_dict()), 200
+    try:
+        # Update basic info
+        if 'name' in data:
+            player.name = data['name'].strip()
+        if 'position' in data:
+            player.position = data['position']
+        if 'team_id' in data:
+            team = Team.query.get(data['team_id'])
+            if not team:
+                return jsonify({'error': 'Team not found'}), 404
+            player.team_id = data['team_id']
+        
+        # Update stats
+        stat_fields = ['hp', 'spd', 'end', 'atk', 'pas', 'sht', 'bli', 'rch']
+        for stat in stat_fields:
+            if stat in data:
+                setattr(player, stat, int(data[stat]))
+        
+        db.session.commit()
+        return jsonify(player.to_dict(include_team=True)), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-@bp.route('/<int:player_id>/levelup', methods=['POST'])
+@players_bp.route('/<int:player_id>/levelup', methods=['POST'])
 def level_up_player(player_id):
     """Level up a player with stat deltas"""
-    player = Player.query.get(player_id)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 404
-    
+    player = Player.query.get_or_404(player_id)
     data = request.get_json()
+    
     if not data or 'stat_deltas' not in data:
         return jsonify({'error': 'stat_deltas required'}), 400
     
     try:
-        result = player.level_up(data['stat_deltas'])
+        player.level_up(data['stat_deltas'])
         db.session.commit()
-        return jsonify(result), 200
+        return jsonify(player.to_dict(include_team=True)), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'error': str(e)}), 500
 
-@bp.route('/<int:player_id>', methods=['DELETE'])
+@players_bp.route('/<int:player_id>', methods=['DELETE'])
 def delete_player(player_id):
     """Delete/release a player from their team"""
-    player = Player.query.get(player_id)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 404
+    player = Player.query.get_or_404(player_id)
     
-    db.session.delete(player)
-    db.session.commit()
-    return jsonify({'message': 'Player deleted'}), 200
+    try:
+        player_name = player.name
+        db.session.delete(player)
+        db.session.commit()
+        return jsonify({'message': f"Player '{player_name}' released successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-@bp.route('/<int:player_id>/transfer', methods=['POST'])
+@players_bp.route('/<int:player_id>/transfer', methods=['POST'])
 def transfer_player(player_id):
     """Transfer a player to another team"""
-    player = Player.query.get(player_id)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 404
-    
+    player = Player.query.get_or_404(player_id)
     data = request.get_json()
+    
     if not data or 'new_team_id' not in data:
         return jsonify({'error': 'new_team_id required'}), 400
     
@@ -120,6 +139,14 @@ def transfer_player(player_id):
     if not new_team:
         return jsonify({'error': 'New team not found'}), 404
     
-    player.team_id = new_team.id
-    db.session.commit()
-    return jsonify(player.to_dict()), 200
+    try:
+        old_team_name = player.team.name
+        player.team_id = new_team.id
+        db.session.commit()
+        return jsonify({
+            'message': f"{player.name} transferred from {old_team_name} to {new_team.name}",
+            'player': player.to_dict(include_team=True)
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
