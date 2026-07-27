@@ -1,18 +1,20 @@
 /**
  * API Client - Handles all backend communication
+ * Production-ready with error handling and retries
  */
 
 const API_URL = 'http://localhost:5000/api';
 
 class APIClient {
     /**
-     * Make API request
+     * Core request handler with error handling
      */
-    static async request(endpoint, method = 'GET', data = null) {
+    static async request(endpoint, method = 'GET', data = null, retries = 3) {
         const options = {
             method,
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             }
         };
 
@@ -20,19 +22,28 @@ class APIClient {
             options.body = JSON.stringify(data);
         }
 
-        try {
-            const response = await fetch(`${API_URL}${endpoint}`, options);
-            const json = await response.json();
+        let lastError;
+        for (let attempt = 0; attempt < retries; attempt++) {
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, options);
+                const json = await response.json();
 
-            if (!response.ok) {
-                throw new Error(json.error || 'API request failed');
+                if (!response.ok) {
+                    throw new Error(json.error || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return json;
+            } catch (error) {
+                lastError = error;
+                if (attempt < retries - 1) {
+                    // Wait before retry (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                }
             }
-
-            return json;
-        } catch (error) {
-            console.error('API Error:', error);
-            throw error;
         }
+
+        console.error('API Error:', lastError);
+        throw lastError;
     }
 
     // ========== TEAMS ==========
@@ -63,8 +74,13 @@ class APIClient {
 
     // ========== PLAYERS ==========
 
-    static async getAllPlayers() {
-        return this.request('/players');
+    static async getAllPlayers(filters = {}) {
+        const params = new URLSearchParams();
+        if (filters.team_id) params.append('team_id', filters.team_id);
+        if (filters.position) params.append('position', filters.position);
+        
+        const query = params.toString() ? `?${params.toString()}` : '';
+        return this.request(`/players${query}`);
     }
 
     static async getPlayer(playerId) {
@@ -106,8 +122,9 @@ class APIClient {
 
     // ========== MATCHES ==========
 
-    static async getAllMatches() {
-        return this.request('/matches');
+    static async getAllMatches(status = null) {
+        const query = status ? `?status=${status}` : '';
+        return this.request(`/matches${query}`);
     }
 
     static async getMatch(matchId) {
@@ -146,5 +163,48 @@ class APIClient {
 
     static async deleteMatch(matchId) {
         return this.request(`/matches/${matchId}`, 'DELETE');
+    }
+
+    // ========== SIMULATION ==========
+
+    static async simulateMatch(matchId) {
+        return this.request(`/simulation/match/${matchId}/simulate`, 'POST');
+    }
+
+    // ========== BUILDER ==========
+
+    static async buildTeam(name, city, coach, skillLevel) {
+        return this.request('/builder/team', 'POST', {
+            name,
+            city,
+            coach,
+            skill_level: skillLevel
+        });
+    }
+
+    static async seedLeague() {
+        return this.request('/builder/seed-league', 'POST');
+    }
+
+    // ========== ANALYTICS ==========
+
+    static async getStandings() {
+        return this.request('/analytics/standings');
+    }
+
+    static async getTopScorers() {
+        return this.request('/analytics/top-scorers');
+    }
+
+    static async getPlayerStats(playerId) {
+        return this.request(`/analytics/player/${playerId}/stats`);
+    }
+
+    static async getTeamStats(teamId) {
+        return this.request(`/analytics/team/${teamId}/stats`);
+    }
+
+    static async getLeagueOverview() {
+        return this.request('/analytics/league/overview');
     }
 }
