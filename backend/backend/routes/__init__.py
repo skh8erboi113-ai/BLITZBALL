@@ -1,11 +1,22 @@
+"""
+API Routes Blueprint Registration
+"""
 from flask import Blueprint
 
-bp = Blueprint('api', __name__, url_prefix='/api')
+# Create main API blueprint
+api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-from backend.routes import teams, players, matches, simulation, builder
+# Import and register sub-blueprints
+from backend.routes.teams import teams_bp
+from backend.routes.players import players_bp
+from backend.routes.matches import matches_bp
+from backend.routes.simulation import simulation_bp
+from backend.routes.builder import builder_bp
+from backend.routes.analytics import analytics_bp
 
-bp.register_blueprint(teams.bp)
-bp.register_blueprint(players.bp)
-bp.register_blueprint(matches.bp)
-bp.register_blueprint(simulation.bp)
-bp.register_blueprint(builder.bp)
+api_bp.register_blueprint(teams_bp)
+api_bp.register_blueprint(players_bp)
+api_bp.register_blueprint(matches_bp)
+api_bp.register_blueprint(simulation_bp)
+api_bp.register_blueprint(builder_bp)
+api_bp.register_blueprint(analytics_bp)
