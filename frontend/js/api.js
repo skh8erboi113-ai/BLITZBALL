@@ -3,7 +3,22 @@
  * Production-ready with error handling and retries
  */
 
-const API_URL = 'http://localhost:5000/api';
+function getApiBaseUrl() {
+    const protocol = window.location.protocol || 'http:';
+    const hostname = window.location.hostname || 'localhost';
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+        return `${protocol}//127.0.0.1:5000/api`;
+    }
+
+    if (/^\d+-/.test(hostname)) {
+        return `${protocol}//${hostname.replace(/^\d+-/, '5000-')}/api`;
+    }
+
+    return `${protocol}//${hostname}:5000/api`;
+}
+
+const API_URL = getApiBaseUrl();
 
 class APIClient {
     /**
